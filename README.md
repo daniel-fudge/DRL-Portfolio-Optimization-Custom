@@ -51,7 +51,14 @@ difficulty.  The first increment will be developed in a separate repo to isolate
 #### Custom DRL in a Toy Environment
 This [repo](https://github.com/daniel-fudge/sagemaker-tennis) develops a custom DRL algorithm to solve the [Tennis](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Learning-Environment-Examples.md#tennis) 
 environment provided by [Unity](https://unity3d.com/machine-learning/).  This will prove the custom DRL implementation 
-on SageMaker.
+on SageMaker.  The [SageMaker Python SDK](https://sagemaker.readthedocs.io/en/stable/frameworks/rl/using_rl.html)
+is normally used when training DRL models on AWS.  Unfortunately this is limited to the [Ray RLlib](https://docs.ray.io/en/master/rllib.html)
+or [Coach](https://nervanasystems.github.io/coach/) tool kits, which can't be used for the custom training and testing 
+environment we wish to develop.  We will then be building a custom [Docker](https://www.docker.com/resources/what-container) 
+container, register it in the AWS [ECR](https://aws.amazon.com/ecr/) and use the AWS [BYOD](https://sagemaker.readthedocs.io/en/stable/overview.html#byo-docker-containers-with-sagemaker-estimators)
+functionality.
+To lay the foundation for this increment, the A Cloud Guru [AWS ECS - Scaling Docker](https://acloud.guru/learn/aws-ecs-scaling-docker)
+course is being completed.  
 
 #### Custom Environment - Deterministic Time-Invariant Pricing
 This increment builds a custom training and test environment that replicates how the custom DRL would be deployed in 
