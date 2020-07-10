@@ -5,7 +5,6 @@ This script trains and saves the model and plots its performance.
 import ast
 import argparse
 from collections import deque
-import logging
 import numpy as np
 import os
 import platform
@@ -81,24 +80,18 @@ def train(epochs, max_t, output_dir, model_dir):
 
     scores = list()
     scores_window = deque(maxlen=100)
-    brain_name = env.brain_names[0]
     start_time = time()
     i_episode = epochs
     for i_episode in range(1, epochs + 1):
-        env_info = env.reset(train_mode=True)[brain_name]
-        states = env_info.vector_observations
+        state = env.reset()
         score = 0
         for t in range(max_t):
-            actions = [agents[i].act(state=states[i]) for i in range(2)]
-            env_info = env.step(actions)[brain_name]
-            next_states = env_info.vector_observations
-            rewards = env_info.rewards
-            done_values = env_info.local_done
-            for i in range(2):
-                agents[i].step(states, actions, rewards, next_states, done_values)
-            states = next_states
-            score += max(rewards)
-            if np.any(done_values):
+            actions = agent.act(state=state)
+            next_state, reward, done = env.step(actions)
+            agent.step(state, actions, reward, next_state, done)
+            state = next_state
+            score += reward
+            if done:
                 break
         scores_window.append(score)  # save most recent score
         scores.append(score)  # save most recent score
@@ -119,11 +112,8 @@ def train(epochs, max_t, output_dir, model_dir):
     # -----------------------------------------------------------------------------------
     for p in [p for p in [model_dir, output_dir] if not os.path.isdir(p)]:
         os.mkdir(p)
-    for i in range(2):
-        torch.save(agents[i].actor_target.state_dict(),
-                   os.path.join(model_dir, 'checkpoint_actor_{}.pth'.format(i + 1)))
-        torch.save(agents[i].critic_target.state_dict(),
-                   os.path.join(model_dir, 'checkpoint_critic_{}.pth'.format(i + 1)))
+    torch.save(agent.actor_target.state_dict(), os.path.join(model_dir, 'checkpoint_actor.pth'))
+    torch.save(agent.critic_target.state_dict(), os.path.join(model_dir, 'checkpoint_critic.pth'))
     np.savez(os.path.join(output_dir, 'scores.npz'), scores)
 
 
@@ -176,21 +166,23 @@ if __name__ == '__main__':
     # Setup the training environment
     # -----------------------------------------------------------------------------------
     logger.info('Setting up the environment.')
-    env = PortfolioEnv(prices_name=args.prices_name)
+    env = PortfolioEnv(prices_name=args.prices_name,
+                       output_path=os.path.join(args.output_dir, 'portfolio-management.csv'))
 
     # size of each action
-    action_size = env.action_space
+    action_size = env.action_space.shape[0]
     logger.info('Size of action space: {}'.format(action_size))
 
     # examine the state space
-    state_size = env.observation_space
+    # TODO: Add CNN to network, i.e. window size > 1 (issue #1)
+    state_size = env.observation_space.shape[0]
     logger.info('State space per agent: {}'.format(state_size))
 
-    # Create the reinforcement learning agents
+    # Create the reinforcement learning agent
     # -----------------------------------------------------------------------------------
-    agents = [Agent(state_size=state_size, action_size=action_size, random_seed=42, lr_actor=args.lr_actor,
-                    lr_critic=args.lr_critic, batch_size=args.batch_size, buffer_size=args.buffer_size,
-                    gamma=args.gamma, tau=args.tau, sigma=args.sigma, fc1=args.fc1, fc2=args.fc2) for _ in range(2)]
+    agent = Agent(state_size=state_size, action_size=action_size, random_seed=42, lr_actor=args.lr_actor,
+                  lr_critic=args.lr_critic, batch_size=args.batch_size, buffer_size=args.buffer_size,
+                  gamma=args.gamma, tau=args.tau, sigma=args.sigma, fc1=args.fc1, fc2=args.fc2)
 
     # Perform the training
     # -----------------------------------------------------------------------------------
