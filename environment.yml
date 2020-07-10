@@ -12,5 +12,6 @@ dependencies:
   - ipython_genutils
   - jupyter
   - pandas
+  - pytorch
   - matplotlib
   - seaborn

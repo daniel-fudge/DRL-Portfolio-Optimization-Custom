@@ -9,10 +9,10 @@ import logging
 import numpy as np
 import os
 import platform
-from tennis.ddpg_agent import Agent
+from drl.ddpg_agent import Agent
+from drl.env import PortfolioEnv
 from time import time
 import torch
-from unityagents import UnityEnvironment
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -128,55 +128,17 @@ def train(epochs, max_t, output_dir, model_dir):
 
 
 # ***************************************************************************************
-def setup_environment():
-    """Setups up the environment to train.
-
-    Returns:
-        UnityEnvironment:  The unity environment
-        int:  The action space size
-        int:  The state size
-    """
-
-    src = os.path.split(__file__)[0]
-    if platform.system() == 'Windows':
-        logger.info("Loading Windows x86 64-bit Tennis environment.")
-        _env = UnityEnvironment(file_name=os.path.join(src, 'Tennis_Windows_x86_64', 'Tennis.exe'))
-    elif platform.system() == 'Linux':
-        logger.info("Loading Linux Tennis environment.")
-        _env = UnityEnvironment(file_name=os.path.join(src, 'Tennis_Linux_NoVis', 'Tennis.x86_64'))
-    else:
-        logger.critical("Only Windows and Linux supported.")
-        raise RuntimeError
-
-    # Setup the environment and print of some information for reference
-    # -----------------------------------------------------------------------------------
-    logger.info('Setting up the environment.')
-    brain_name = _env.brain_names[0]
-    brain = _env.brains[brain_name]
-    env_info = _env.reset(train_mode=True)[brain_name]
-
-    # number of agents
-    num_agents = len(env_info.agents)
-    logger.info('Number of agents: {}'.format(num_agents))
-
-    # size of each action
-    _action_size = brain.vector_action_space_size
-    logger.info('Size of action space: {}'.format(_action_size))
-
-    # examine the state space
-    _state_size = env_info.vector_observations.shape[1]
-    logger.info('State space per agent: {}'.format(_state_size))
-
-    return _env, _action_size, _state_size
-
-
-# ***************************************************************************************
 if __name__ == '__main__':
 
     # Read the arguments
     # -----------------------------------------------------------------------------------
     parser = argparse.ArgumentParser()
 
+    # These are general setting
+    parser.add_argument('--prices_name', type=str, default='prices1.csv', metavar='P',
+                        help='the csv file name containing the price history (default: prices1.csv)')
+
+    # These are hyperparameters that could be tuned
     parser.add_argument('--epochs', type=int, default=2000, metavar='E',
                         help='number of total epochs to run (default: 2000)')
     parser.add_argument('--max_t', type=int, default=1000, metavar='T',
@@ -213,7 +175,16 @@ if __name__ == '__main__':
 
     # Setup the training environment
     # -----------------------------------------------------------------------------------
-    env, action_size, state_size = setup_environment()
+    logger.info('Setting up the environment.')
+    env = PortfolioEnv(prices_name=args.prices_name)
+
+    # size of each action
+    action_size = env.action_space
+    logger.info('Size of action space: {}'.format(action_size))
+
+    # examine the state space
+    state_size = env.observation_space
+    logger.info('State space per agent: {}'.format(state_size))
 
     # Create the reinforcement learning agents
     # -----------------------------------------------------------------------------------
