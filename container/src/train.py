@@ -13,15 +13,12 @@ from drl.env import PortfolioEnv
 from time import time
 import torch
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
-    logger.info("GPU activated.")
+    print("GPU activated.")
 else:
     device = torch.device("cpu")
-    logger.info("CPU activated.")
+    print("CPU activated.")
 
 
 # ***************************************************************************************
@@ -165,18 +162,18 @@ if __name__ == '__main__':
 
     # Setup the training environment
     # -----------------------------------------------------------------------------------
-    logger.info('Setting up the environment.')
+    print('Setting up the environment.')
     env = PortfolioEnv(prices_name=args.prices_name,
                        output_path=os.path.join(args.output_dir, 'portfolio-management.csv'))
 
     # size of each action
     action_size = env.action_space.shape[0]
-    logger.info('Size of action space: {}'.format(action_size))
+    print('Size of action space: {}'.format(action_size))
 
     # examine the state space
     # TODO: Add CNN to network, i.e. window size > 1 (issue #1)
     state_size = env.observation_space.shape[0]
-    logger.info('State space per agent: {}'.format(state_size))
+    print('State space per agent: {}'.format(state_size))
 
     # Create the reinforcement learning agent
     # -----------------------------------------------------------------------------------
@@ -186,13 +183,13 @@ if __name__ == '__main__':
 
     # Perform the training
     # -----------------------------------------------------------------------------------
-    logger.info('Training the agent.')
+    print('Training the agent.')
     start = time()
     train(epochs=args.epochs, max_t=args.max_t, output_dir=args.output_dir, model_dir=args.model_dir)
 
-    logger.info("Training Time:  {:.1f} minutes".format((time() - start)/60.0))
+    print("Training Time:  {:.1f} minutes".format((time() - start)/60.0))
 
     # Make some pretty plots
     # -----------------------------------------------------------------------------------
-    logger.info('Make training plot called scores.png.')
+    print('Make training plot called scores.png.')
     make_plot(output_dir=args.output_dir)
