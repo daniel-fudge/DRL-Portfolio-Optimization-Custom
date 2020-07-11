@@ -186,7 +186,6 @@ if __name__ == '__main__':
     print('Training the agent.')
     start = time()
     train(epochs=args.epochs, max_t=args.max_t, output_dir=args.output_dir, model_dir=args.model_dir)
-
     print("Training Time:  {:.1f} minutes".format((time() - start)/60.0))
 
     # Make some pretty plots

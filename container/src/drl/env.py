@@ -57,7 +57,7 @@ class PortfolioEnv:
         raw_prices = pd.read_csv(os.path.join(src_folder, prices_name), index_col=0, parse_dates=True)
         self.tickers = raw_prices.columns.tolist()
         self.gain = np.hstack((np.ones((raw_prices.shape[0]-1, 1)), raw_prices.values[1:] / raw_prices.values[:-1]))
-        self.dates = raw_prices.index.values[1:]
+        self.dates = raw_prices.index.values[:-1]
         self.n_dates = self.dates.shape[0]
         self.n_tickers = len(self.tickers)
         self.weights = np.insert(np.zeros(self.n_tickers), 0, 1.0)
