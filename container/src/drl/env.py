@@ -13,39 +13,38 @@ class PortfolioEnv:
     The observations include a history of the signals with the given `window_length` ending at the current date.
 
     Args:
-        steps (int):  Steps or days in an episode.
         trading_cost (float):  Cost of trade as a fraction.
         window_length (int):  How many past observations to return.
-        start_date_index (int | None):  The date index in the signals and price arrays.
         prices_name (str):  CSV file name for the price history.
 
     Attributes:
         action_space (np.array):  [n_tickers]  The portfolio weighting not including cash.
         dates (np.array of np.datetime64):  [n_days] Dates for the signals and price history arrays.
-        info_list (list):  List of info dictionaries for each step.
         n_signals (int):  Number of signals in each observation.
         n_tickers (int):  Number of tickers in the price history.
         observation_space (np.array)  [self.n_signals, window_length]  The signals with a window_length history.
+        market_value (float):  The market value, starting at $1.
         portfolio_value (float):  The portfolio value, starting with $1 in cash.
         gain (np.array):  [n_days, n_tickers] The relative price vector; tomorrow's / today's price.
         signals (np.array):  [n_signals, n_days, 1]  Signals that define the observable environment.
-        start_date_index (int):  The date index in the signals and price arrays.
+        start_day (int):  The start date index in the signals and price arrays.
         step_number (int):  The step number of the episode.
-        steps (int):  Steps or days in an episode.
         tickers (list of str):  The stock tickers.
         trading_cost (float):  Cost of trade as a fraction.
         window_length (int):  How many past observations to return.
+        weights (np.array):  [1 + n_tickers]  The portfolio asset weighting starting with cash.
     """
 
-    def __init__(self, steps=505, trading_cost=0.0025, window_length=1, start_date_index=None,
-                 prices_name='prices1.csv', output_path='/opt/ml/output/data/portfolio-management.csv'):
+    def __init__(self, trading_cost=0.0025, window_length=1, prices_name='prices1.csv', 
+                 output_path='/opt/ml/output/data/portfolio-management.csv'):
         """An environment for financial portfolio management."""
 
         # Initialize some local parameters
         self.csv = output_path
-        self.info_list = list()
+        self.market_value = 1.0
         self.portfolio_value = 1.0
         self.step_number = 0
+        self.start_day = 0
 
         # Save some arguments as attributes
         self.trading_cost = trading_cost
@@ -57,8 +56,8 @@ class PortfolioEnv:
         raw_prices = pd.read_csv(os.path.join(src_folder, prices_name), index_col=0, parse_dates=True)
         self.tickers = raw_prices.columns.tolist()
         self.gain = np.hstack((np.ones((raw_prices.shape[0]-1, 1)), raw_prices.values[1:] / raw_prices.values[:-1]))
-        self.dates = raw_prices.index.values[:-1]
-        self.n_dates = self.dates.shape[0]
+        self.dates = raw_prices.index.values
+        self.n_dates = self.dates.shape[0] - 1
         self.n_tickers = len(self.tickers)
         self.weights = np.insert(np.zeros(self.n_tickers), 0, 1.0)
 
@@ -72,11 +71,6 @@ class PortfolioEnv:
 
         # Define the observation space, which are the signals
         self.observation_space = np.empty(self.n_signals * self.window_length)
-
-        # Rest the environment
-        self.start_date_index = start_date_index
-        self.steps = steps
-        self.reset()
         
     # -----------------------------------------------------------------------------------
     def step(self, action):
@@ -86,16 +80,14 @@ class PortfolioEnv:
             action (np.array):  The desired portfolio weights [w0...].
 
         Returns:
-            np.array:  [n_signals * window_length] The observation of the environment (state)
+            np.array:  [n_signals * window_length] The observation of the environment (state).
             float:  The reward received from the previous action.
-            bool:  Indicates if the simulation is complete.
-            dict:  Debugging information.
         """
 
-        t = self.start_date_index + self.step_number  # t is when you make the trade
-        w0 = self.weights                             # w0 is the portfolio weights before trading
-        p0 = self.portfolio_value                     # p0 is the portfolio value before trading
-        gain = self.gain[t]                              # y is the relative price vector; tomorrow's / today's price.
+        t = self.start_day + self.step_number  # t is when you make the trade
+        w0 = self.weights                      # w0 is the portfolio weights before trading
+        p0 = self.portfolio_value              # p0 is the portfolio value before trading
+        gain = self.gain[t]                    # gain is the relative price vector; tomorrow's / today's price.
 
         # Force the new weights (w1) to (0.0, 1.0) and sum weights = 1, note 1st weight is cash
         #   w0_post is the desired portfolio weighting after the trades but still at time t
@@ -122,52 +114,35 @@ class PortfolioEnv:
         t0 = t - self.window_length + 1
         state = self.signals[:, t0:t+1].flatten()
 
-        # Save some information for debugging and plotting at the end
-        r = gain.mean()
-        if self.step_number == 0:
-            market_value = r
-        else:
-            market_value = self.info_list[-1]["market_value"] * r 
-        info = {"reward": reward, "portfolio_value": p1, 'date': self.dates[t],
-                'steps': self.step_number, "market_value": market_value}
-        self.info_list.append(info)
-
-        # Check if finished and write to file
-        done = False
-        if (self.step_number >= self.steps) or (p1 <= 0):
-            done = True
-            pd.DataFrame(self.info_list).sort_values(by=['date']).to_csv(self.csv)
-
+        # Save market value and increment the step number
+        self.market_value *= gain.mean()
         self.step_number += 1
 
-        return state, reward, done
+        return state, reward
 
-    def reset(self):
+    def reset(self, epoch_start, market_value=1.0, portfolio_value=1.0, weights=None):
         """Reset the environment to the initial state.
+
+        Args:
+            epoch_start (int):  The epoch start date index.
+            market_value (float):  The market value.
+            portfolio_value (float):  The portfolio value.
+            weights (np.array):  [1 + n_tickers]  The portfolio asset weighting starting with cash.
 
         Returns:
             np.array:  [n_signals * window_length] The first state observation
         """
 
-        self.info_list = list()
-        self.weights = np.insert(np.zeros(self.n_tickers), 0, 1.0)
-        self.portfolio_value = 1.0
+        self.start_day = epoch_start
+        if weights is None:
+            self.weights = np.insert(np.zeros(self.n_tickers), 0, 1.0)
+        else:
+            self.weights = weights
+        self.market_value = market_value
+        self.portfolio_value = portfolio_value
         self.step_number = 0
 
-        # Limit the number of steps
-        self.steps = min(self.steps, self.n_dates - self.window_length - 1)
-
-        # Control the start date
-        if self.start_date_index is None:
-            self.start_date_index = np.random.random_integers(self.window_length - 1, 
-                                                              self.n_dates - self.steps - 1)
-        else:     
-            # noinspection PyTypeChecker
-            self.start_date_index = np.clip(self.start_date_index,
-                                            a_min=self.window_length - 1,
-                                            a_max=self.n_dates - self.steps - 1)
-
-        t = self.start_date_index + self.step_number
+        t = self.start_day + self.step_number
         t0 = t - self.window_length + 1
         state = self.signals[:, t0:t+1].flatten()
 

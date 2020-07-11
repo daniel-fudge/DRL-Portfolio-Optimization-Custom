@@ -31,87 +31,91 @@ def make_plot(output_dir, show=False):
     """
 
     import matplotlib.pyplot as plt
+    import seaborn as sns
+    sns.set()
 
-    target = 0.5
-
-    # Load the previous scores and calculated running mean of 100 runs
+    # Load the trading history
     # ---------------------------------------------------------------------------------------
-    with np.load(os.path.join(output_dir, 'scores.npz')) as data:
-        scores = data['arr_0']
-    cum_sum = np.cumsum(np.insert(scores, 0, 0))
-    rolling_mean = (cum_sum[100:] - cum_sum[:-100]) / 100
+    history = pd.read_csv(os.path.join(output_dir, 'history.csv'))
 
     # Make a pretty plot
     # ---------------------------------------------------------------------------------------
-    plt.figure()
-    x_max = len(scores)
-    y_min = scores.min() - 1
-    x = np.arange(x_max)
-    plt.scatter(x, scores, s=2, c='k', label='Raw Scores', zorder=4)
-    plt.plot(x[99:], rolling_mean, lw=2, label='Rolling Mean', zorder=3)
-    plt.scatter(x_max, rolling_mean[-1], c='g', s=40, marker='*', label='Episode {}'.format(x_max), zorder=5)
-    plt.plot([0, x_max], [target, target], lw=1, c='grey', ls='--', label='Target Score = {}'.format(target), zorder=1)
-    plt.plot([x_max, x_max], [y_min, rolling_mean[-1]], lw=1, c='grey', ls='--', label=None, zorder=2)
-    plt.ylabel('Score')
-    plt.xlabel('Episode #')
-    plt.legend()
-    plt.xlim([0, x_max + 5])
-    plt.ylim(bottom=0)
+    history.plot(figsize=(11, 3))
     if show:
         plt.show()
     else:
-        plt.savefig(os.path.join(output_dir, 'scores.png'), dpi=200)
+        plt.savefig(os.path.join(output_dir, 'history.png'), dpi=200)
     plt.close()
 
 
 # ***************************************************************************************
-def train(epochs, max_t, output_dir, model_dir):
-    """This function trains the given agent in the given environment.
+def train():
+    """This function trains the given agent in the given environment."""
 
-    Args:
-        epochs (int): Maximum number of training epochs
-        max_t (int): Maximum number of time steps per episode
-        output_dir (str):  Location to save output.
-        model_dir (str):  Location to save checkpoints and final model.
-    """
-
-    scores = list()
-    scores_window = deque(maxlen=100)
+    scores_window = deque(maxlen=10)
     start_time = time()
-    i_episode = epochs
-    for i_episode in range(1, epochs + 1):
-        state = env.reset()
-        score = 0
-        for t in range(max_t):
-            actions = agent.act(state=state)
-            next_state, reward, done = env.step(actions)
-            agent.step(state, actions, reward, next_state, done)
-            state = next_state
-            score += reward
-            if done:
+
+    # Set the true portfolio and market values
+    portfolio = np.ones(env.n_dates)
+    market = np.ones(env.n_dates)
+    weights = np.insert(np.zeros(env.n_tickers), 0, 1.0)
+
+    # Outer loop for each trading day in the provided history
+    for day in range(args.start_day, env.n_dates):
+
+        # We train until we consistently beat the market or the max number of epochs reached
+        #    The start date is selected randomly with the probability skewed exponentially toward today
+        #    The minus 1 is critical to ensure the training does NOT get to see tomorrow's prices
+        max_start_day = day - args.days_per_epoch - 1
+
+        p = np.exp(args.memory_strength * np.arange(max_start_day) / max_start_day)
+        p = p / p.sum()
+        for e in range(args.max_epochs):
+            state = env.reset(epoch_start=np.random.choice(max_start_day, size=None, p=p))
+            for d in range(args.days_per_epoch):
+                actions = agent.act(state=state)
+                next_state, reward = env.step(actions)
+                agent.step(state, actions, reward, next_state, d == (args.days_per_epoch - 1))
+                state = next_state
+            scores_window.append(env.portfolio_value / env.market_value)
+
+            # Exit if consistently beating market
+            mean_score = np.mean(scores_window)
+            if (mean_score > args.target) and (e > 10):
                 break
-        scores_window.append(score)  # save most recent score
-        scores.append(score)  # save most recent score
-        if i_episode % 100 == 0:
-            print('Episode {} Average Score: {:.2f}'.format(i_episode, np.mean(scores_window)))
-        if np.mean(scores_window) >= 0.5:
-            tmp_str = '\nEnvironment solved in {:d} episodes!  Average Score: {:.2f}'
-            print(tmp_str.format(i_episode, np.mean(scores_window)))
-            break
-    print('{:d} training episodes completed.'.format(i_episode))
-    mean_score = np.mean(scores_window)
-    print('{:.2f} average score.'.format(mean_score))
+            elif (e > 1) and (e % 100 == 0):
+                print('\nDay {}, epoch {} mean p/m ratio: {:.2f}'.format(day, e, mean_score))
+            else:
+                print('.', end='')
+
+        # Make the real trade for today (you only get to do this once)
+        state = env.reset(epoch_start=day, portfolio_value=portfolio[day], market_value=market[day], weights=weights)
+        actions = agent.act(state=state)
+        next_state, reward = env.step(actions)
+        agent.step(state, actions, reward, next_state, done=True)
+
+        # Save tomorrow's portfolio and market values
+        portfolio[day + 1] = env.portfolio_value
+        market[day + 1] = env.market_value
+
+        # Print some info to screen to color the drying paint
+        if day % 100 == 0:
+            print('\nDay {} p/m ratio: {:.2f}'.format(day, portfolio[day + 1] / market[day + 1]))
+
+    # Print the final information for curiosity and hyperparameter tuning
+    ratio = portfolio[-1] / market[-1]
+    print('{:.2f} p/m ratio.'.format(ratio))
     duration = (time() - start_time)/60
     print('{:.2f} minutes of training.'.format(duration))
-    print('{:.2f} training objective.'.format(i_episode - 1000*mean_score + 10*duration))
+    print('{:.2f} training objective.'.format(100*(ratio - 1) - np.max([0.0, duration - 60.0])))
 
-    # Save models weights and scores
+    # Save models weights and training history
     # -----------------------------------------------------------------------------------
     for p in [p for p in [model_dir, output_dir] if not os.path.isdir(p)]:
         os.mkdir(p)
     torch.save(agent.actor_target.state_dict(), os.path.join(model_dir, 'checkpoint_actor.pth'))
     torch.save(agent.critic_target.state_dict(), os.path.join(model_dir, 'checkpoint_critic.pth'))
-    np.savez(os.path.join(output_dir, 'scores.npz'), scores)
+    pd.DataFrame(index=env.dates, data={'portfolio': portfolio, 'market': market}).to_csv('history.csv')
 
 
 # ***************************************************************************************
@@ -122,32 +126,26 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # These are general setting
-    parser.add_argument('--prices_name', type=str, default='prices1.csv', metavar='P',
+    parser.add_argument('--prices_name', type=str, default='prices1.csv',
                         help='the csv file name containing the price history (default: prices1.csv)')
+    parser.add_argument('--trading_cost', type=float, default=0.0025, help='trading cost (default: 0.0025)')
 
     # These are hyperparameters that could be tuned
-    parser.add_argument('--epochs', type=int, default=2000, metavar='E',
-                        help='number of total epochs to run (default: 2000)')
-    parser.add_argument('--max_t', type=int, default=1000, metavar='T',
-                        help='max number of time steps per epoch (default: 1000)')
-    parser.add_argument('--fc1', type=int, default=128, metavar='FC1',
-                        help='size of 1st hidden layer (default: 128)')
-    parser.add_argument('--fc2', type=int, default=64, metavar='FC2',
-                        help='size of 2bd hidden layer (default: 64)')
-    parser.add_argument('--lr_actor', type=float, default=0.001, metavar='LRA',
-                        help='initial learning rate for actor (default: 0.001)')
-    parser.add_argument('--lr_critic', type=float, default=0.001, metavar='LRC',
-                        help='initial learning rate for critic (default: 0.001)')
-    parser.add_argument('--batch_size', type=int, default=256, metavar='BS',
-                        help='mini batch size (default: 256)')
-    parser.add_argument('--buffer_size', type=int, default=int(1e5), metavar='BFS',
-                        help='replay buffer size (default: 10,000)')
-    parser.add_argument('--gamma', type=float, default=0.9, metavar='G',
-                        help='discount factor (default: 0.9)')
-    parser.add_argument('--tau', type=float, default=0.001, metavar='TAU',
-                        help='soft update of target parameters (default: 0.001)')
-    parser.add_argument('--sigma', type=float, default=0.01, metavar='S',
-                        help='OU Noise standard deviation (default: 0.01)')
+    parser.add_argument('--max_epochs', type=int, default=2000, help='max epochs per new trading day (default: 2000)')
+    parser.add_argument('--days_per_epoch', type=int, default=40, help='days in each epoch (default: 40)')
+    parser.add_argument('--start_day', type=int, default=504, help='day to begin training (default: 504)')
+    parser.add_argument('--window_length', type=int, default=1, help='CNN window length (default: 1)')
+    parser.add_argument('--memory_strength', type=float, default=2.0, help='memory exponential gain (default: 2.0)')
+    parser.add_argument('--target', type=float, default=1.01, help='target portfolio/market ratio (default: 1.01)')
+    parser.add_argument('--fc1', type=int, default=128, help='size of 1st hidden layer (default: 128)')
+    parser.add_argument('--fc2', type=int, default=64, help='size of 2bd hidden layer (default: 64)')
+    parser.add_argument('--lr_actor', type=float, default=0.001, help='initial actor learning rate (default: 0.001)')
+    parser.add_argument('--lr_critic', type=float, default=0.001, help='initial critic learning rate (default: 0.001)')
+    parser.add_argument('--batch_size', type=int, default=256, help='mini batch size (default: 256)')
+    parser.add_argument('--buffer_size', type=int, default=int(1e5), help='replay buffer size (default: 10,000)')
+    parser.add_argument('--gamma', type=float, default=0.9, help='discount factor (default: 0.9)')
+    parser.add_argument('--tau', type=float, default=0.001, help='soft update of target parameters (default: 0.001)')
+    parser.add_argument('--sigma', type=float, default=0.01, help='OU Noise standard deviation (default: 0.01)')
 
     # The parameters below retrieve their default values from SageMaker environment variables, which are
     # instantiated by the SageMaker containers framework.
@@ -163,7 +161,7 @@ if __name__ == '__main__':
     # Setup the training environment
     # -----------------------------------------------------------------------------------
     print('Setting up the environment.')
-    env = PortfolioEnv(prices_name=args.prices_name,
+    env = PortfolioEnv(prices_name=args.prices_name, trading_cost=args.trading_cost, window_length=args.window_length,
                        output_path=os.path.join(args.output_dir, 'portfolio-management.csv'))
 
     # size of each action
@@ -185,10 +183,10 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     print('Training the agent.')
     start = time()
-    train(epochs=args.epochs, max_t=args.max_t, output_dir=args.output_dir, model_dir=args.model_dir)
+    train()
     print("Training Time:  {:.1f} minutes".format((time() - start)/60.0))
 
     # Make some pretty plots
     # -----------------------------------------------------------------------------------
-    print('Make training plot called scores.png.')
+    print('Make training plot.')
     make_plot(output_dir=args.output_dir)
