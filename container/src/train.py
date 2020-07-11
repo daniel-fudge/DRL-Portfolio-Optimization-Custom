@@ -82,6 +82,7 @@ def train():
             # Exit if consistently beating market
             mean_score = np.mean(scores_window)
             if (mean_score > args.target) and (e > 10):
+                print('\nDay {}, epoch {} mean p/m ratio: {:.2f}'.format(day, e, mean_score))
                 break
             elif (e > 1) and (e % 100 == 0):
                 print('\nDay {}, epoch {} mean p/m ratio: {:.2f}'.format(day, e, mean_score))
