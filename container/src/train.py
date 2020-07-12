@@ -7,6 +7,7 @@ import argparse
 from collections import deque
 import numpy as np
 import os
+import pandas as pd
 import platform
 from drl.ddpg_agent import Agent
 from drl.env import PortfolioEnv
@@ -22,11 +23,12 @@ else:
 
 
 # ***************************************************************************************
-def make_plot(output_dir, show=False):
+def make_plot(output_dir, start_day, show=False):
     """Makes a pretty training plot call score.png.
 
     Args:
         output_dir (str):  Location to save output.
+        start_day (int):  Date index when trading began.
         show (bool):  If True, show the image.  If False, save the image.
     """
 
@@ -36,11 +38,11 @@ def make_plot(output_dir, show=False):
 
     # Load the trading history
     # ---------------------------------------------------------------------------------------
-    history = pd.read_csv(os.path.join(output_dir, 'history.csv'))
+    history = pd.read_csv(os.path.join(output_dir, 'history.csv'), index_col=0)
 
     # Make a pretty plot
     # ---------------------------------------------------------------------------------------
-    history.plot(figsize=(11, 3))
+    history.iloc[start_day-2:, :].plot(y=['portfolio', 'market'], use_index=True, figsize=(11, 3))
     if show:
         plt.show()
     else:
@@ -56,8 +58,8 @@ def train():
     start_time = time()
 
     # Set the true portfolio and market values
-    portfolio = np.ones(env.n_dates)
-    market = np.ones(env.n_dates)
+    portfolio = np.ones(env.n_dates + 1)
+    market = np.ones(env.n_dates + 1)
     weights = np.insert(np.zeros(env.n_tickers), 0, 1.0)
 
     # Outer loop for each trading day in the provided history
@@ -112,11 +114,12 @@ def train():
 
     # Save models weights and training history
     # -----------------------------------------------------------------------------------
-    for p in [p for p in [model_dir, output_dir] if not os.path.isdir(p)]:
+    for p in [p for p in [args.model_dir, args.output_dir] if not os.path.isdir(p)]:
         os.mkdir(p)
-    torch.save(agent.actor_target.state_dict(), os.path.join(model_dir, 'checkpoint_actor.pth'))
-    torch.save(agent.critic_target.state_dict(), os.path.join(model_dir, 'checkpoint_critic.pth'))
-    pd.DataFrame(index=env.dates, data={'portfolio': portfolio, 'market': market}).to_csv('history.csv')
+    torch.save(agent.actor_target.state_dict(), os.path.join(args.model_dir, 'checkpoint_actor.pth'))
+    torch.save(agent.critic_target.state_dict(), os.path.join(args.model_dir, 'checkpoint_critic.pth'))
+    history = pd.DataFrame(index=env.dates, data={'portfolio': portfolio, 'market': market})
+    history.to_csv(os.path.join(args.output_dir, 'history.csv'))
 
 
 # ***************************************************************************************
@@ -137,16 +140,16 @@ if __name__ == '__main__':
     parser.add_argument('--start_day', type=int, default=504, help='day to begin training (default: 504)')
     parser.add_argument('--window_length', type=int, default=1, help='CNN window length (default: 1)')
     parser.add_argument('--memory_strength', type=float, default=2.0, help='memory exponential gain (default: 2.0)')
-    parser.add_argument('--target', type=float, default=1.01, help='target portfolio/market ratio (default: 1.01)')
+    parser.add_argument('--target', type=float, default=1.02, help='target portfolio/market ratio (default: 1.02)')
     parser.add_argument('--fc1', type=int, default=128, help='size of 1st hidden layer (default: 128)')
     parser.add_argument('--fc2', type=int, default=64, help='size of 2bd hidden layer (default: 64)')
-    parser.add_argument('--lr_actor', type=float, default=0.001, help='initial actor learning rate (default: 0.001)')
-    parser.add_argument('--lr_critic', type=float, default=0.001, help='initial critic learning rate (default: 0.001)')
+    parser.add_argument('--lr_actor', type=float, default=0.00037, help='initial actor learning rate (default: 0.00037)')
+    parser.add_argument('--lr_critic', type=float, default=0.0011, help='initial critic learning rate (default: 0.0011)')
     parser.add_argument('--batch_size', type=int, default=256, help='mini batch size (default: 256)')
     parser.add_argument('--buffer_size', type=int, default=int(1e5), help='replay buffer size (default: 10,000)')
-    parser.add_argument('--gamma', type=float, default=0.9, help='discount factor (default: 0.9)')
-    parser.add_argument('--tau', type=float, default=0.001, help='soft update of target parameters (default: 0.001)')
-    parser.add_argument('--sigma', type=float, default=0.01, help='OU Noise standard deviation (default: 0.01)')
+    parser.add_argument('--gamma', type=float, default=0.91, help='discount factor (default: 0.91)')
+    parser.add_argument('--tau', type=float, default=0.0072, help='soft update of target parameters (default: 0.0072)')
+    parser.add_argument('--sigma', type=float, default=0.013, help='OU Noise standard deviation (default: 0.013)')
 
     # The parameters below retrieve their default values from SageMaker environment variables, which are
     # instantiated by the SageMaker containers framework.
@@ -162,8 +165,7 @@ if __name__ == '__main__':
     # Setup the training environment
     # -----------------------------------------------------------------------------------
     print('Setting up the environment.')
-    env = PortfolioEnv(prices_name=args.prices_name, trading_cost=args.trading_cost, window_length=args.window_length,
-                       output_path=os.path.join(args.output_dir, 'portfolio-management.csv'))
+    env = PortfolioEnv(prices_name=args.prices_name, trading_cost=args.trading_cost, window_length=args.window_length)
 
     # size of each action
     action_size = env.action_space.shape[0]
@@ -190,4 +192,4 @@ if __name__ == '__main__':
     # Make some pretty plots
     # -----------------------------------------------------------------------------------
     print('Make training plot.')
-    make_plot(output_dir=args.output_dir)
+    make_plot(output_dir=args.output_dir, start_day=args.start_day)

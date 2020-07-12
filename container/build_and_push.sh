@@ -9,11 +9,6 @@ if [[ ${1} == "gpu" ]]; then
     gpu="yes"
 fi
 
-# Unpack Tennis executable if not already unpacked
-if [ ! -d "container/src/Tennis_Linux_NoVis" ]; then
-    unzip container/Tennis_Linux_NoVis.zip -d container/src > /dev/null
-fi
-
 # Get the account number associated with the current IAM credentials
 account=$(aws sts get-caller-identity --query Account --output text)
 
@@ -27,10 +22,10 @@ region=${region:-us-east-1}
 
 # Define the new ECR image name
 if [ $gpu == "yes" ]; then
-    image="sagemaker-tennis-gpu"
+    image="portfolio-optimization-gpu"
     echo "Requesting GPU image"
 else
-    image="sagemaker-tennis-cpu"
+    image="portfolio-optimization-cpu"
     echo "Requesting CPU image"
 fi
 fullname="${account}.dkr.ecr.${region}.amazonaws.com/${image}:latest"
@@ -49,7 +44,7 @@ $(aws ecr get-login --registry-ids 520713654638 --region ${region} --no-include-
 
 # Build the docker image locally with the image name and then push it to ECR
 # with the full name.
-cd $HOME/SageMaker/sagemaker-tennis/container
+cd $HOME/SageMaker/DRL-Portfolio-Optimization-Custom/container
 if [ $gpu == "yes" ]; then
     docker build -t ${image} -f Dockerfile-gpu . --build-arg REGION=${region}
     echo "Building GPU image"
@@ -60,4 +55,4 @@ fi
 docker tag ${image} ${fullname}
 
 docker push ${fullname}
-cd $HOME/SageMaker/sagemaker-tennis
+cd $HOME/SageMaker/DRL-Portfolio-Optimization-Custom

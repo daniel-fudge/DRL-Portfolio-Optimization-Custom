@@ -1,3 +1,4 @@
 grpcio-tools
 gym
 box2d-py~=2.3.5
+seaborn

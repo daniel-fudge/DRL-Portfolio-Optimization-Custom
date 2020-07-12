@@ -35,12 +35,10 @@ class PortfolioEnv:
         weights (np.array):  [1 + n_tickers]  The portfolio asset weighting starting with cash.
     """
 
-    def __init__(self, trading_cost=0.0025, window_length=1, prices_name='prices1.csv', 
-                 output_path='/opt/ml/output/data/portfolio-management.csv'):
+    def __init__(self, trading_cost=0.0025, window_length=1, prices_name='prices1.csv'):
         """An environment for financial portfolio management."""
 
         # Initialize some local parameters
-        self.csv = output_path
         self.market_value = 1.0
         self.portfolio_value = 1.0
         self.step_number = 0
