@@ -100,6 +100,7 @@ def train():
         # Save tomorrow's portfolio and market values
         portfolio[day + 1] = env.portfolio_value
         market[day + 1] = env.market_value
+        weights = env.weights
 
         # Print some info to screen to color the drying paint
         if day % 100 == 0:
