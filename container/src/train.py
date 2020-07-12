@@ -51,45 +51,59 @@ def make_plot(output_dir, start_day, show=False):
 
 
 # ***************************************************************************************
+def offline_training(day):
+    """This function performs the offline.
+
+    Args:
+        day (int):  The date index that the training is being called from.
+    """
+
+    # The target alpha based on the annual target and 252 trading days
+    target = (1.0 + args.target) ** (args.days_per_epoch/252.0)
+
+    # The minus 1 is critical to ensure the training does NOT get to see tomorrow's prices
+    max_start_day = day - args.days_per_epoch - 1
+
+    # The start date of each epoch is selected randomly with the probability skewed
+    #     exponentially toward today.
+    p = np.exp(args.memory_strength * np.arange(max_start_day) / max_start_day)
+    p = p / p.sum()
+
+    # We train until we consistently beat the market or the max number of epochs reached.
+    epoch_window = deque(maxlen=10)
+    for e in range(args.max_epochs):
+        state = env.reset(epoch_start=np.random.choice(max_start_day, size=None, p=p))
+        for d in range(args.days_per_epoch):
+            actions = agent.act(state=state)
+            next_state, reward = env.step(actions)
+            agent.step(state, actions, reward, next_state, d == (args.days_per_epoch - 1))
+            state = next_state
+        epoch_window.append(env.portfolio_value / env.market_value)
+
+        if np.mean(epoch_window) > target:
+            break
+
+
+# ***************************************************************************************
 def train():
     """This function trains the given agent in the given environment."""
 
-    scores_window = deque(maxlen=10)
     start_time = time()
 
-    # Set the true portfolio and market values
+    # The target alpha based on the annual target and 5 trading days
+    target = (1.0 + args.target) ** (5.0/252.0) - 1.0
+
+    # Perform the initial training
+    # -----------------------------------------------------------------------------------
+    print('Beginning initial training.')
+    offline_training(args.start_day)
+
+    # Begin the daily trading and retraining if required
+    # -----------------------------------------------------------------------------------
     portfolio = np.ones(env.n_dates + 1)
     market = np.ones(env.n_dates + 1)
     weights = np.insert(np.zeros(env.n_tickers), 0, 1.0)
-
-    # Outer loop for each trading day in the provided history
     for day in range(args.start_day, env.n_dates):
-
-        # We train until we consistently beat the market or the max number of epochs reached
-        #    The start date is selected randomly with the probability skewed exponentially toward today
-        #    The minus 1 is critical to ensure the training does NOT get to see tomorrow's prices
-        max_start_day = day - args.days_per_epoch - 1
-
-        p = np.exp(args.memory_strength * np.arange(max_start_day) / max_start_day)
-        p = p / p.sum()
-        for e in range(args.max_epochs):
-            state = env.reset(epoch_start=np.random.choice(max_start_day, size=None, p=p))
-            for d in range(args.days_per_epoch):
-                actions = agent.act(state=state)
-                next_state, reward = env.step(actions)
-                agent.step(state, actions, reward, next_state, d == (args.days_per_epoch - 1))
-                state = next_state
-            scores_window.append(env.portfolio_value / env.market_value)
-
-            # Exit if consistently beating market
-            mean_score = np.mean(scores_window)
-            if (mean_score > args.target) and (e > 10):
-                print('\nDay {}, epoch {} mean p/m ratio: {:.2f}'.format(day, e, mean_score))
-                break
-            elif (e > 1) and (e % 100 == 0):
-                print('\nDay {}, epoch {} mean p/m ratio: {:.2f}'.format(day, e, mean_score))
-            else:
-                print('.', end='')
 
         # Make the real trade for today (you only get to do this once)
         state = env.reset(epoch_start=day, portfolio_value=portfolio[day], market_value=market[day], weights=weights)
@@ -103,15 +117,31 @@ def train():
         weights = env.weights
 
         # Print some info to screen to color the drying paint
-        if day % 100 == 0:
-            print('\nDay {} p/m ratio: {:.2f}'.format(day, portfolio[day + 1] / market[day + 1]))
+        if day % 20 == 0:
+            print('Day {} p/m ratio: {:.2f}'.format(day, portfolio[day + 1] / market[day + 1]))
+
+        # Retrain if we aren't beating the market over last five days
+        alpha = (portfolio[day + 1] - portfolio[day - 4]) / portfolio[day - 4] - \
+                (market[day + 1] - market[day - 4]) / market[day - 4]
+        if alpha <= target:
+            offline_training(day)
 
     # Print the final information for curiosity and hyperparameter tuning
-    ratio = portfolio[-1] / market[-1]
-    print('{:.2f} p/m ratio.'.format(ratio))
+    alpha = (1 + portfolio[-1] - market[-1]) ** (252.0 / (env.n_dates - args.start_day)) - 1.0
+    print('{:.2f} annualized alpha.'.format(alpha))
     duration = (time() - start_time)/60
     print('{:.2f} minutes of training.'.format(duration))
-    print('{:.2f} training objective.'.format(1000*(ratio - 1) - np.max([0.0, duration - 60.0])))
+
+    # The objective will be minimized so there is a big penalty for missing the target
+    objective = 100000 * np.max([0.0, args.target - alpha])
+
+    # Faster is better so there is a penalty for run time
+    objective += duration
+
+    # And a little boost for alpha above the target
+    objective -= 1000 * np.max([0.0, alpha - args.target])
+
+    print('{:.2f} training objective.'.format(objective))
 
     # Save models weights and training history
     # -----------------------------------------------------------------------------------
@@ -141,11 +171,11 @@ if __name__ == '__main__':
     parser.add_argument('--start_day', type=int, default=504, help='day to begin training (default: 504)')
     parser.add_argument('--window_length', type=int, default=1, help='CNN window length (default: 1)')
     parser.add_argument('--memory_strength', type=float, default=2.0, help='memory exponential gain (default: 2.0)')
-    parser.add_argument('--target', type=float, default=1.02, help='target portfolio/market ratio (default: 1.02)')
+    parser.add_argument('--target', type=float, default=0.05, help='target annual alpha (default: 0.05)')
     parser.add_argument('--fc1', type=int, default=128, help='size of 1st hidden layer (default: 128)')
     parser.add_argument('--fc2', type=int, default=64, help='size of 2bd hidden layer (default: 64)')
-    parser.add_argument('--lr_actor', type=float, default=0.00037, help='initial actor learning rate (default: 0.00037)')
-    parser.add_argument('--lr_critic', type=float, default=0.0011, help='initial critic learning rate (default: 0.0011)')
+    parser.add_argument('--lr_actor', type=float, default=0.00037, help='actor learning rate (default: 0.00037)')
+    parser.add_argument('--lr_critic', type=float, default=0.0011, help='critic learning rate (default: 0.0011)')
     parser.add_argument('--batch_size', type=int, default=256, help='mini batch size (default: 256)')
     parser.add_argument('--buffer_size', type=int, default=int(1e5), help='replay buffer size (default: 10,000)')
     parser.add_argument('--gamma', type=float, default=0.91, help='discount factor (default: 0.91)')
