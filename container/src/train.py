@@ -111,7 +111,7 @@ def train():
     print('{:.2f} p/m ratio.'.format(ratio))
     duration = (time() - start_time)/60
     print('{:.2f} minutes of training.'.format(duration))
-    print('{:.2f} training objective.'.format(100*(ratio - 1) - np.max([0.0, duration - 60.0])))
+    print('{:.2f} training objective.'.format(1000*(ratio - 1) - np.max([0.0, duration - 60.0])))
 
     # Save models weights and training history
     # -----------------------------------------------------------------------------------
