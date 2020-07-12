@@ -15,12 +15,13 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent:
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, random_seed, lr_actor, lr_critic, buffer_size, batch_size, tau, gamma,
-                 sigma, fc1, fc2):
+    def __init__(self, state_size, window_length, action_size, random_seed, lr_actor, lr_critic, buffer_size,
+                 batch_size, tau, gamma, sigma, fc1, fc2):
         """Initialize an Agent object.
 
         Args:
             state_size (int): dimension of each state
+            window_length (int): Number of days in sliding window
             action_size (int): dimension of each action
             random_seed (int): random seed
             lr_actor (float): initial learning rate for actor
@@ -41,13 +42,13 @@ class Agent:
         self.tau = tau
 
         # Actor Network (w/ Target Network)
-        self.actor_local = Actor(state_size, action_size, random_seed, fc1, fc2).to(device)
-        self.actor_target = Actor(state_size, action_size, random_seed, fc1, fc2).to(device)
+        self.actor_local = Actor(state_size, window_length, action_size, random_seed, fc1, fc2).to(device)
+        self.actor_target = Actor(state_size, window_length, action_size, random_seed, fc1, fc2).to(device)
         self.actor_optimizer = optimum.Adam(self.actor_local.parameters(), lr=lr_actor)
 
         # Critic Network (w/ Target Network)
-        self.critic_local = Critic(state_size, action_size, random_seed, fc1, fc2).to(device)
-        self.critic_target = Critic(state_size, action_size, random_seed, fc1, fc2).to(device)
+        self.critic_local = Critic(state_size, window_length, action_size, random_seed, fc1, fc2).to(device)
+        self.critic_target = Critic(state_size, window_length, action_size, random_seed, fc1, fc2).to(device)
         self.critic_optimizer = optimum.Adam(self.critic_local.parameters(), lr=lr_critic)
 
         # Noise process

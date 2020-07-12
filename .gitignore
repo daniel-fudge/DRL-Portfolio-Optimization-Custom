@@ -128,3 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 /portfolio-management.csv
+/history.csv
+/history.png
+/container/src/model-dir/checkpoint_actor.pth
+/container/src/model-dir/checkpoint_critic.pth

@@ -169,7 +169,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_epochs', type=int, default=2000, help='max epochs per new trading day (default: 2000)')
     parser.add_argument('--days_per_epoch', type=int, default=40, help='days in each epoch (default: 40)')
     parser.add_argument('--start_day', type=int, default=504, help='day to begin training (default: 504)')
-    parser.add_argument('--window_length', type=int, default=1, help='CNN window length (default: 1)')
+    parser.add_argument('--window_length', type=int, default=10, help='CNN window length (default: 10)')
     parser.add_argument('--memory_strength', type=float, default=2.0, help='memory exponential gain (default: 2.0)')
     parser.add_argument('--target', type=float, default=0.05, help='target annual alpha (default: 0.05)')
     parser.add_argument('--fc1', type=int, default=128, help='size of 1st hidden layer (default: 128)')
@@ -203,15 +203,15 @@ if __name__ == '__main__':
     print('Size of action space: {}'.format(action_size))
 
     # examine the state space
-    # TODO: Add CNN to network, i.e. window size > 1 (issue #1)
-    state_size = env.observation_space.shape[0]
+    state_size = env.observation_space.shape[1]
     print('State space per agent: {}'.format(state_size))
 
     # Create the reinforcement learning agent
     # -----------------------------------------------------------------------------------
-    agent = Agent(state_size=state_size, action_size=action_size, random_seed=42, lr_actor=args.lr_actor,
-                  lr_critic=args.lr_critic, batch_size=args.batch_size, buffer_size=args.buffer_size,
-                  gamma=args.gamma, tau=args.tau, sigma=args.sigma, fc1=args.fc1, fc2=args.fc2)
+    agent = Agent(state_size=state_size, window_length=args.window_length, action_size=action_size, random_seed=42,
+                  lr_actor=args.lr_actor, lr_critic=args.lr_critic, batch_size=args.batch_size,
+                  buffer_size=args.buffer_size, gamma=args.gamma, tau=args.tau, sigma=args.sigma,
+                  fc1=args.fc1, fc2=args.fc2)
 
     # Perform the training
     # -----------------------------------------------------------------------------------

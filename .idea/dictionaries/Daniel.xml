@@ -2,6 +2,7 @@
   <dictionary name="Daniel">
     <words>
       <w>byod</w>
+      <w>conv</w>
       <w>cuda</w>
       <w>dtype</w>
       <w>hyperparameter</w>
@@ -9,6 +10,7 @@
       <w>larkin</w>
       <w>llib</w>
       <w>ornstein</w>
+      <w>relu</w>
       <w>schulich</w>
       <w>uhlenbeck</w>
     </words>

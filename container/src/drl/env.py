@@ -22,7 +22,7 @@ class PortfolioEnv:
         dates (np.array of np.datetime64):  [n_days] Dates for the signals and price history arrays.
         n_signals (int):  Number of signals in each observation.
         n_tickers (int):  Number of tickers in the price history.
-        observation_space (np.array)  [self.n_signals, window_length]  The signals with a window_length history.
+        observation_space (np.array)  [batch_size, n_signals, window_length]  The signals with a window_length history.
         market_value (float):  The market value, starting at $1.
         portfolio_value (float):  The portfolio value, starting with $1 in cash.
         gain (np.array):  [n_days, n_tickers] The relative price vector; tomorrow's / today's price.
@@ -35,7 +35,7 @@ class PortfolioEnv:
         weights (np.array):  [1 + n_tickers]  The portfolio asset weighting starting with cash.
     """
 
-    def __init__(self, trading_cost=0.0025, window_length=1, prices_name='prices1.csv'):
+    def __init__(self, trading_cost, window_length, prices_name):
         """An environment for financial portfolio management."""
 
         # Initialize some local parameters
@@ -61,14 +61,14 @@ class PortfolioEnv:
 
         # Read the signals
         self.signals = pd.read_csv(os.path.join(src_folder, 'signals.csv'),
-                                   index_col=0, parse_dates=True).T.values[:, :, np.newaxis]
-        self.n_signals = self.signals.shape[0]
+                                   index_col=0, parse_dates=True).T.values[np.newaxis, :, :]
+        self.n_signals = self.signals.shape[1]
 
         # Define the action space as the portfolio weights where wn are [0, 1] for each asset not including cash
         self.action_space = np.empty(self.n_tickers)
 
-        # Define the observation space, which are the signals
-        self.observation_space = np.empty(self.n_signals * self.window_length)
+        # Define the observation space, which are the signals [batch_size, n_signals, windows_length]
+        self.observation_space = np.empty([1, self.n_signals, self.window_length])
         
     # -----------------------------------------------------------------------------------
     def step(self, action):
@@ -110,7 +110,7 @@ class PortfolioEnv:
 
         # Observe the new environment (state)
         t0 = t - self.window_length + 1
-        state = self.signals[:, t0:t+1].flatten()
+        state = self.signals[:, :, t0:t+1]
 
         # Save market value and increment the step number
         self.market_value *= gain.mean()
@@ -142,6 +142,6 @@ class PortfolioEnv:
 
         t = self.start_day + self.step_number
         t0 = t - self.window_length + 1
-        state = self.signals[:, t0:t+1].flatten()
+        state = self.signals[:, :, t0:t+1]
 
         return state
