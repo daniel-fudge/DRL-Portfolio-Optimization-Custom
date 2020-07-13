@@ -71,7 +71,7 @@ def offline_training(day):
     p = p / p.sum()
 
     # We train until we consistently beat the market or the max number of epochs reached.
-    epoch_window = deque(maxlen=10)
+    epoch_window = deque(maxlen=100)
     for e in range(args.max_epochs):
         state = env.reset(epoch_start=np.random.choice(max_start_day, size=None, p=p))
         for d in range(args.days_per_epoch):
@@ -81,7 +81,7 @@ def offline_training(day):
             state = next_state
         epoch_window.append(env.portfolio_value / env.market_value)
 
-        if np.mean(epoch_window) > target:
+        if (np.mean(epoch_window) > target) and (e > 10):
             break
 
 
@@ -181,7 +181,8 @@ if __name__ == '__main__':
     parser.add_argument('--buffer_size', type=int, default=int(1e5), help='replay buffer size (default: 10,000)')
     parser.add_argument('--gamma', type=float, default=0.91, help='discount factor (default: 0.91)')
     parser.add_argument('--tau', type=float, default=0.0072, help='soft update of target parameters (default: 0.0072)')
-    parser.add_argument('--sigma', type=float, default=0.013, help='OU Noise standard deviation (default: 0.013)')
+    parser.add_argument('--sigma', type=float, default=0.0, help='OU Noise standard deviation (default: 0.0)')
+    parser.add_argument('--theta', type=float, default=0.0, help='OU Noise theta gain (default: 0.0)')
 
     # The parameters below retrieve their default values from SageMaker environment variables, which are
     # instantiated by the SageMaker containers framework.
@@ -211,7 +212,7 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     agent = Agent(state_size=state_size, window_length=args.window_length, action_size=action_size, random_seed=42,
                   lr_actor=args.lr_actor, lr_critic=args.lr_critic, batch_size=args.batch_size,
-                  buffer_size=args.buffer_size, gamma=args.gamma, tau=args.tau, sigma=args.sigma,
+                  buffer_size=args.buffer_size, gamma=args.gamma, tau=args.tau, sigma=args.sigma, theta=args.theta,
                   fc1=args.fc1, fc2=args.fc2)
 
     # Perform the training

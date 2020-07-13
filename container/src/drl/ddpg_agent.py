@@ -16,7 +16,7 @@ class Agent:
     """Interacts with and learns from the environment."""
 
     def __init__(self, state_size, window_length, action_size, random_seed, lr_actor, lr_critic, buffer_size,
-                 batch_size, tau, gamma, sigma, fc1, fc2):
+                 batch_size, tau, gamma, sigma, theta, fc1, fc2):
         """Initialize an Agent object.
 
         Args:
@@ -31,6 +31,7 @@ class Agent:
             gamma (float): discount factor
             tau (float): soft update of target parameters
             sigma (float): OU Noise standard deviation
+            theta (float): OU Noise theta gain
             fc1 (int):  Size of 1st hidden layer
             fc2 (int):  Size of 2nd hidden layer
         """
@@ -52,7 +53,7 @@ class Agent:
         self.critic_optimizer = optimum.Adam(self.critic_local.parameters(), lr=lr_critic)
 
         # Noise process
-        self.noise = OUNoise(size=action_size, seed=random_seed, sigma=sigma)
+        self.noise = OUNoise(size=action_size, seed=random_seed, sigma=sigma, theta=theta)
 
         # Replay memory
         self.memory = ReplayBuffer(action_size, buffer_size, batch_size, random_seed)
@@ -137,7 +138,7 @@ class Agent:
 class OUNoise:
     """Ornstein-Uhlenbeck process."""
 
-    def __init__(self, size, seed, sigma, mu=0., theta=0.15):
+    def __init__(self, size, seed, sigma, theta, mu=0.):
         """Initialize parameters and noise process."""
         self.mu = mu * np.ones(size)
         self.theta = theta
