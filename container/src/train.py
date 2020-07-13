@@ -67,6 +67,7 @@ def offline_training(day):
     # The start date of each epoch is selected randomly with the probability skewed
     #     exponentially toward today.
     p = np.exp(args.memory_strength * np.arange(max_start_day) / max_start_day)
+    p[:args.window_length + 1] = 0
     p = p / p.sum()
 
     # We train until we consistently beat the market or the max number of epochs reached.
@@ -167,13 +168,13 @@ if __name__ == '__main__':
 
     # These are hyperparameters that could be tuned
     parser.add_argument('--max_epochs', type=int, default=2000, help='max epochs per new trading day (default: 2000)')
-    parser.add_argument('--days_per_epoch', type=int, default=40, help='days in each epoch (default: 40)')
+    parser.add_argument('--days_per_epoch', type=int, default=252, help='days in each epoch (default: 252)')
     parser.add_argument('--start_day', type=int, default=504, help='day to begin training (default: 504)')
     parser.add_argument('--window_length', type=int, default=10, help='CNN window length (default: 10)')
     parser.add_argument('--memory_strength', type=float, default=2.0, help='memory exponential gain (default: 2.0)')
     parser.add_argument('--target', type=float, default=0.05, help='target annual alpha (default: 0.05)')
-    parser.add_argument('--fc1', type=int, default=128, help='size of 1st hidden layer (default: 128)')
-    parser.add_argument('--fc2', type=int, default=64, help='size of 2bd hidden layer (default: 64)')
+    parser.add_argument('--fc1', type=int, default=256, help='size of 1st hidden layer (default: 256)')
+    parser.add_argument('--fc2', type=int, default=128, help='size of 2bd hidden layer (default: 128)')
     parser.add_argument('--lr_actor', type=float, default=0.00037, help='actor learning rate (default: 0.00037)')
     parser.add_argument('--lr_critic', type=float, default=0.0011, help='critic learning rate (default: 0.0011)')
     parser.add_argument('--batch_size', type=int, default=256, help='mini batch size (default: 256)')
