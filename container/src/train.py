@@ -60,7 +60,8 @@ def offline_training(day):
 
     # The target alpha based on the annual target and 252 trading days
     target = (1.0 + args.target) ** (args.days_per_epoch/252.0)
-    print('Target = {}.'.format(target))
+    if args.debug:
+        print('Target = {}.'.format(target))
 
     # The minus 1 is critical to ensure the training does NOT get to see tomorrow's prices
     max_start_day = day - args.days_per_epoch - 1
