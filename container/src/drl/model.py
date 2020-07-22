@@ -50,7 +50,6 @@ class Actor(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        print('Resetting Actor.')
 
         # TODO: This need to be removed per issue #3
         self.a1.reset_parameters()
@@ -129,7 +128,6 @@ class Critic(nn.Module):
 
     def reset_parameters(self):
 
-        print('Resetting Critic.')
         # TODO: This need to be removed per issue #3
         self.a1.reset_parameters()
         self.a2.reset_parameters()
