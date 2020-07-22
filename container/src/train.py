@@ -178,7 +178,7 @@ if __name__ == '__main__':
     parser.add_argument('--window_length', type=int, default=10, help='CNN window length (default: 10)')
     parser.add_argument('--memory_strength', type=float, default=2.0, help='memory exponential gain (default: 2.0)')
     parser.add_argument('--target', type=float, default=0.05, help='target annual alpha (default: 0.05)')
-    parser.add_argument('--fc1', type=int, default=9, help='size of 1st hidden layer (default: 6)')
+    parser.add_argument('--fc1', type=int, default=9, help='size of 1st hidden layer (default: 9)')
     parser.add_argument('--fc2', type=int, default=0, help='size of 2nd hidden layer (default: 0)')
     parser.add_argument('--lr_actor', type=float, default=0.00037, help='actor learning rate (default: 0.00037)')
     parser.add_argument('--lr_critic', type=float, default=0.0011, help='critic learning rate (default: 0.0011)')
