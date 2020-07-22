@@ -8,7 +8,6 @@ developed on AWS SageMaker.
 - [Incremental Approach](#incremental-approach)
   - [Custom DRL in a Toy Environment](#custom-drl-in-a-toy-environment)
   - [Custom Environment - Deterministic Time-Invariant Pricing](#custom-environment---deterministic-time-invariant-pricing)
-  - [Testing - Deterministic Time Varying Pricing Functions](#testing---deterministic-time-varying-pricing-functions)
   - [Testing - Real Pricing Information](#testing---real-pricing-information)
 - [Results](#results)
 - [License](#license)
