@@ -43,10 +43,15 @@ class Actor(nn.Module):
         self.a9 = AssetModel(n_signals, window_length, seed, fc1, fc2)
         self.a10 = AssetModel(n_signals, window_length, seed, fc1, fc2)
 
-        self.fc_out = nn.Linear(fc2 * n_assets, n_assets)
+        if fc2 == 0:
+            self.fc_out = nn.Linear(fc1 * n_assets, n_assets)
+        else:
+            self.fc_out = nn.Linear(fc2 * n_assets, n_assets)
         self.reset_parameters()
 
     def reset_parameters(self):
+        print('Resetting Actor.')
+
         # TODO: This need to be removed per issue #3
         self.a1.reset_parameters()
         self.a2.reset_parameters()
@@ -116,10 +121,15 @@ class Critic(nn.Module):
         self.a9 = AssetModel(n_signals, window_length, seed, fc1, fc2)
         self.a10 = AssetModel(n_signals, window_length, seed, fc1, fc2)
 
-        self.fc_out = nn.Linear(fc2 * n_assets + n_assets, n_assets)
+        if fc2 == 0:
+            self.fc_out = nn.Linear(fc1 * n_assets + n_assets, n_assets)
+        else:
+            self.fc_out = nn.Linear(fc2 * n_assets + n_assets, n_assets)
         self.reset_parameters()
 
     def reset_parameters(self):
+
+        print('Resetting Critic.')
         # TODO: This need to be removed per issue #3
         self.a1.reset_parameters()
         self.a2.reset_parameters()
@@ -170,24 +180,38 @@ class AssetModel(nn.Module):
         super(AssetModel, self).__init__()
         out_channels = n_signals
         kernel_size = 3
+        self.use_fc2 = fc2 > 0
         self.n_signals = n_signals
         self.conv1d_out = (window_length - kernel_size + 1) * out_channels
         self.seed = torch.manual_seed(seed)
-        self.conv1d = nn.Conv1d(n_signals, out_channels, kernel_size=kernel_size)
+
         self.relu = nn.ReLU(inplace=True)
+        self.drop1 = nn.Dropout(p=0.1)
+        self.drop2 = nn.Dropout(p=0.2)
+
+        self.conv1d = nn.Conv1d(n_signals, out_channels, kernel_size=kernel_size)
+        self.bn = nn.BatchNorm1d(out_channels)
+
         self.fc1 = nn.Linear(self.conv1d_out, fc1)
-        self.fc2 = nn.Linear(fc1, fc2)
+        if self.use_fc2:
+            self.fc2 = nn.Linear(fc1, fc2)
         self.reset_parameters()
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.conv1d.weight)
         self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
-        self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
         self.fc1.bias.data.fill_(0.1)
-        self.fc2.bias.data.fill_(0.1)
+        if self.use_fc2:
+            self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+            self.fc2.bias.data.fill_(0.1)
 
     def forward(self, state):
+        # x = self.relu(self.bn(self.conv1d(state)))
+        # x = self.drop1(self.relu(self.bn(self.conv1d(state))))
+        # x = self.drop1(self.relu(self.conv1d(state)))
         x = self.relu(self.conv1d(state))
         x = x.contiguous().view(-1, self.conv1d_out)
-        x = self.relu(self.fc1(x))
-        return self.relu(self.fc2(x))
+        x = self.drop2(self.relu(self.fc1(x)))
+        if self.use_fc2:
+            x = self.drop2(self.relu(self.fc2(x)))
+        return x

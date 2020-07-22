@@ -60,6 +60,7 @@ def offline_training(day):
 
     # The target alpha based on the annual target and 252 trading days
     target = (1.0 + args.target) ** (args.days_per_epoch/252.0)
+    print('Target = {}.'.format(target))
 
     # The minus 1 is critical to ensure the training does NOT get to see tomorrow's prices
     max_start_day = day - args.days_per_epoch - 1
@@ -83,6 +84,8 @@ def offline_training(day):
 
         if (np.mean(epoch_window) > target) and (e > 10):
             break
+        elif args.debug:
+            print(np.mean(epoch_window))
 
 
 # ***************************************************************************************
@@ -165,6 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--prices_name', type=str, default='prices1.csv',
                         help='the csv file name containing the price history (default: prices1.csv)')
     parser.add_argument('--trading_cost', type=float, default=0.0025, help='trading cost (default: 0.0025)')
+    parser.add_argument('--debug', type=int, default=0, help='print debug if != 0 (default: 0)')
 
     # These are hyperparameters that could be tuned
     parser.add_argument('--max_epochs', type=int, default=2000, help='max epochs per new trading day (default: 2000)')
