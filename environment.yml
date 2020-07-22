@@ -1,0 +1,17 @@
+name: customdrl
+channels:
+  - defaults
+dependencies:
+  - pip
+  - python=3
+  - ipykernel
+  - ipython
+  - jupyter_client
+  - jupyter_core
+  - traitlets
+  - ipython_genutils
+  - jupyter
+  - pandas
+  - pytorch
+  - matplotlib
+  - seaborn
