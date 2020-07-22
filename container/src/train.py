@@ -200,7 +200,7 @@ if __name__ == '__main__':
     print('Setting up the environment.')
     env = PortfolioEnv(prices_name=args.prices_name, trading_cost=args.trading_cost, window_length=args.window_length)
     print('Number of assets: {}'.format(env.n_assets))
-    print('State space per agent: {}'.format(env.n_signals))
+    print('Signals per asset: {}'.format(env.n_signals))
 
     # Create the reinforcement learning agent
     # -----------------------------------------------------------------------------------

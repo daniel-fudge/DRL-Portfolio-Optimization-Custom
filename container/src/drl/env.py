@@ -74,7 +74,7 @@ class PortfolioEnv:
             action (np.array):  The desired portfolio weights [w0...].
 
         Returns:
-            np.array:  [n_signals_total * window_length] The observation of the environment (state).
+            np.array:  [batch_size, n_signals_total, window_length] The observation of the environment (state).
             float:  The reward received from the previous action.
         """
 
