@@ -103,7 +103,7 @@ def train():
     # -----------------------------------------------------------------------------------
     portfolio = np.ones(env.n_dates + 1)
     market = np.ones(env.n_dates + 1)
-    weights = np.insert(np.zeros(env.n_tickers), 0, 1.0)
+    weights = np.insert(np.zeros(env.n_assets), 0, 1.0)
     for day in range(args.start_day, env.n_dates):
 
         # Make the real trade for today (you only get to do this once)
@@ -173,8 +173,8 @@ if __name__ == '__main__':
     parser.add_argument('--window_length', type=int, default=10, help='CNN window length (default: 10)')
     parser.add_argument('--memory_strength', type=float, default=2.0, help='memory exponential gain (default: 2.0)')
     parser.add_argument('--target', type=float, default=0.05, help='target annual alpha (default: 0.05)')
-    parser.add_argument('--fc1', type=int, default=256, help='size of 1st hidden layer (default: 256)')
-    parser.add_argument('--fc2', type=int, default=128, help='size of 2bd hidden layer (default: 128)')
+    parser.add_argument('--fc1', type=int, default=32, help='size of 1st hidden layer (default: 32)')
+    parser.add_argument('--fc2', type=int, default=16, help='size of 2bd hidden layer (default: 16)')
     parser.add_argument('--lr_actor', type=float, default=0.00037, help='actor learning rate (default: 0.00037)')
     parser.add_argument('--lr_critic', type=float, default=0.0011, help='critic learning rate (default: 0.0011)')
     parser.add_argument('--batch_size', type=int, default=256, help='mini batch size (default: 256)')
@@ -199,21 +199,15 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------------
     print('Setting up the environment.')
     env = PortfolioEnv(prices_name=args.prices_name, trading_cost=args.trading_cost, window_length=args.window_length)
-
-    # size of each action
-    action_size = env.action_space.shape[0]
-    print('Size of action space: {}'.format(action_size))
-
-    # examine the state space
-    state_size = env.observation_space.shape[1]
-    print('State space per agent: {}'.format(state_size))
+    print('Number of assets: {}'.format(env.n_assets))
+    print('State space per agent: {}'.format(env.n_signals))
 
     # Create the reinforcement learning agent
     # -----------------------------------------------------------------------------------
-    agent = Agent(state_size=state_size, window_length=args.window_length, action_size=action_size, random_seed=42,
-                  lr_actor=args.lr_actor, lr_critic=args.lr_critic, batch_size=args.batch_size,
-                  buffer_size=args.buffer_size, gamma=args.gamma, tau=args.tau, sigma=args.sigma, theta=args.theta,
-                  fc1=args.fc1, fc2=args.fc2)
+    agent = Agent(n_assets=env.n_assets, n_signals=env.n_signals,
+                  window_length=args.window_length, lr_actor=args.lr_actor, lr_critic=args.lr_critic,
+                  batch_size=args.batch_size, buffer_size=args.buffer_size, gamma=args.gamma, tau=args.tau,
+                  sigma=args.sigma, theta=args.theta, fc1=args.fc1, fc2=args.fc2, random_seed=42)
 
     # Perform the training
     # -----------------------------------------------------------------------------------

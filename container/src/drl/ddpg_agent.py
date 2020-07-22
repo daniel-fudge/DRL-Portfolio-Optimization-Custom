@@ -15,14 +15,14 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class Agent:
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, window_length, action_size, random_seed, lr_actor, lr_critic, buffer_size,
+    def __init__(self, n_signals, window_length, n_assets, random_seed, lr_actor, lr_critic, buffer_size,
                  batch_size, tau, gamma, sigma, theta, fc1, fc2):
         """Initialize an Agent object.
 
         Args:
-            state_size (int): dimension of each state
+            n_signals (int): Number of signals per asset
             window_length (int): Number of days in sliding window
-            action_size (int): dimension of each action
+            n_assets (int): Number of assets in portfolio not counting cash
             random_seed (int): random seed
             lr_actor (float): initial learning rate for actor
             lr_critic (float): initial learning rate for critic
@@ -35,28 +35,28 @@ class Agent:
             fc1 (int):  Size of 1st hidden layer
             fc2 (int):  Size of 2nd hidden layer
         """
-        self.state_size = state_size
-        self.action_size = action_size
+        self.n_signals = n_signals
+        self.n_assets = n_assets
         self.seed = random.seed(random_seed)
         self.batch_size = batch_size
         self.gamma = gamma
         self.tau = tau
 
         # Actor Network (w/ Target Network)
-        self.actor_local = Actor(state_size, window_length, action_size, random_seed, fc1, fc2).to(device)
-        self.actor_target = Actor(state_size, window_length, action_size, random_seed, fc1, fc2).to(device)
+        self.actor_local = Actor(n_signals, window_length, n_assets, random_seed, fc1, fc2).to(device)
+        self.actor_target = Actor(n_signals, window_length, n_assets, random_seed, fc1, fc2).to(device)
         self.actor_optimizer = optimum.Adam(self.actor_local.parameters(), lr=lr_actor)
 
         # Critic Network (w/ Target Network)
-        self.critic_local = Critic(state_size, window_length, action_size, random_seed, fc1, fc2).to(device)
-        self.critic_target = Critic(state_size, window_length, action_size, random_seed, fc1, fc2).to(device)
+        self.critic_local = Critic(n_signals, window_length, n_assets, random_seed, fc1, fc2).to(device)
+        self.critic_target = Critic(n_signals, window_length, n_assets, random_seed, fc1, fc2).to(device)
         self.critic_optimizer = optimum.Adam(self.critic_local.parameters(), lr=lr_critic)
 
         # Noise process
-        self.noise = OUNoise(size=action_size, seed=random_seed, sigma=sigma, theta=theta)
+        self.noise = OUNoise(size=n_assets, seed=random_seed, sigma=sigma, theta=theta)
 
         # Replay memory
-        self.memory = ReplayBuffer(action_size, buffer_size, batch_size, random_seed)
+        self.memory = ReplayBuffer(n_assets, buffer_size, batch_size, random_seed)
 
     def step(self, state, actions, reward, next_state, done):
         """Save experience in replay memory, and use random sample from buffer to learn."""
@@ -161,14 +161,14 @@ class OUNoise:
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
-    def __init__(self, action_size, buffer_size, batch_size, seed):
+    def __init__(self, n_assets, buffer_size, batch_size, seed):
         """Initialize a ReplayBuffer object.
         Params
         ======
             buffer_size (int): maximum size of buffer
             batch_size (int): size of each training batch
         """
-        self.action_size = action_size
+        self.n_assets = n_assets
         self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
         self.batch_size = batch_size
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])

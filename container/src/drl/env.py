@@ -18,21 +18,20 @@ class PortfolioEnv:
         prices_name (str):  CSV file name for the price history.
 
     Attributes:
-        action_space (np.array):  [n_tickers]  The portfolio weighting not including cash.
         dates (np.array of np.datetime64):  [n_days] Dates for the signals and price history arrays.
-        n_signals (int):  Number of signals in each observation.
-        n_tickers (int):  Number of tickers in the price history.
-        observation_space (np.array)  [batch_size, n_signals, window_length]  The signals with a window_length history.
+        n_signals (int):  Number of signals for each asset in each observation.
+        n_signals_total (int):  Number of total signals in each observation.
+        n_assets (int):  Number of assets in the price history.
         market_value (float):  The market value, starting at $1.
         portfolio_value (float):  The portfolio value, starting with $1 in cash.
-        gain (np.array):  [n_days, n_tickers] The relative price vector; tomorrow's / today's price.
-        signals (np.array):  [n_signals, n_days, 1]  Signals that define the observable environment.
+        gain (np.array):  [n_days, n_assets] The relative price vector; tomorrow's / today's price.
+        signals (np.array):  [1, n_signals_total, n_days]  Signals that define the observable environment.
         start_day (int):  The start date index in the signals and price arrays.
         step_number (int):  The step number of the episode.
-        tickers (list of str):  The stock tickers.
+        asset_names (list of str):  The stock tickers.
         trading_cost (float):  Cost of trade as a fraction.
         window_length (int):  How many past observations to return.
-        weights (np.array):  [1 + n_tickers]  The portfolio asset weighting starting with cash.
+        weights (np.array):  [1 + n_assets]  The portfolio asset weighting starting with cash.
     """
 
     def __init__(self, trading_cost, window_length, prices_name):
@@ -52,23 +51,20 @@ class PortfolioEnv:
         #   Note the raw prices have an extra day vs the signals to calculate gain
         src_folder = os.path.split(os.path.dirname(__file__))[0]
         raw_prices = pd.read_csv(os.path.join(src_folder, prices_name), index_col=0, parse_dates=True)
-        self.tickers = raw_prices.columns.tolist()
+        self.asset_names = raw_prices.columns.tolist()
         self.gain = np.hstack((np.ones((raw_prices.shape[0]-1, 1)), raw_prices.values[1:] / raw_prices.values[:-1]))
         self.dates = raw_prices.index.values
         self.n_dates = self.dates.shape[0] - 1
-        self.n_tickers = len(self.tickers)
-        self.weights = np.insert(np.zeros(self.n_tickers), 0, 1.0)
+        self.n_assets = len(self.asset_names)
+        self.weights = np.insert(np.zeros(self.n_assets), 0, 1.0)
 
         # Read the signals
-        self.signals = pd.read_csv(os.path.join(src_folder, 'signals.csv'),
-                                   index_col=0, parse_dates=True).T.values[np.newaxis, :, :]
-        self.n_signals = self.signals.shape[1]
-
-        # Define the action space as the portfolio weights where wn are [0, 1] for each asset not including cash
-        self.action_space = np.empty(self.n_tickers)
-
-        # Define the observation space, which are the signals [batch_size, n_signals, windows_length]
-        self.observation_space = np.empty([1, self.n_signals, self.window_length])
+        df = pd.read_csv(os.path.join(src_folder, 'signals.csv'), index_col=0, parse_dates=True)
+        signal_names = [s.split("_", 1)[0] for s in df.columns if s.endswith('_' + self.asset_names[0])]
+        columns = [s + '_' + a for s in signal_names for a in self.asset_names]
+        self.signals = df.loc[:, columns].T.values[np.newaxis, :, :]
+        self.n_signals = len(signal_names)
+        self.n_signals_total = self.signals.shape[1]
         
     # -----------------------------------------------------------------------------------
     def step(self, action):
@@ -78,7 +74,7 @@ class PortfolioEnv:
             action (np.array):  The desired portfolio weights [w0...].
 
         Returns:
-            np.array:  [n_signals * window_length] The observation of the environment (state).
+            np.array:  [n_signals_total * window_length] The observation of the environment (state).
             float:  The reward received from the previous action.
         """
 
@@ -125,15 +121,15 @@ class PortfolioEnv:
             epoch_start (int):  The epoch start date index.
             market_value (float):  The market value.
             portfolio_value (float):  The portfolio value.
-            weights (np.array):  [1 + n_tickers]  The portfolio asset weighting starting with cash.
+            weights (np.array):  [1 + n_assets]  The portfolio asset weighting starting with cash.
 
         Returns:
-            np.array:  [n_signals * window_length] The first state observation
+            np.array:  [n_signals_total * window_length] The first state observation
         """
 
         self.start_day = epoch_start
         if weights is None:
-            self.weights = np.insert(np.zeros(self.n_tickers), 0, 1.0)
+            self.weights = np.insert(np.zeros(self.n_assets), 0, 1.0)
         else:
             self.weights = weights
         self.market_value = market_value
