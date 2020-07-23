@@ -113,7 +113,10 @@ def train():
     portfolio = np.ones(env.n_dates + 1)
     market = np.ones(env.n_dates + 1)
     weights = np.insert(np.zeros(env.n_assets), 0, 1.0)
+    delta_days = 5
+    days_after_train = 0
     for day in range(args.start_day, env.n_dates):
+        days_after_train += 1
 
         # Make the real trade for today (you only get to do this once)
         state = env.reset(epoch_start=day, portfolio_value=portfolio[day], market_value=market[day], weights=weights)
@@ -131,10 +134,11 @@ def train():
             print('Day {} p/m ratio: {:.2f}'.format(day, portfolio[day + 1] / market[day + 1]))
 
         # Retrain if we aren't beating the market over last five days
-        alpha = (portfolio[day + 1] - portfolio[day - 4]) / portfolio[day - 4] - \
-                (market[day + 1] - market[day - 4]) / market[day - 4]
-        if alpha <= target:
+        alpha = (portfolio[day + 1] - portfolio[day - delta_days + 1]) / portfolio[day - delta_days + 1] - \
+                (market[day + 1] - market[day - delta_days + 1]) / market[day - delta_days + 1]
+        if (alpha <= target) and (days_after_train > delta_days):
             offline_training(day)
+            days_after_train = 0
 
     # Print the final information for curiosity and hyperparameter tuning
     alpha = (1 + portfolio[-1] - market[-1]) ** (252.0 / (env.n_dates - args.start_day)) - 1.0
