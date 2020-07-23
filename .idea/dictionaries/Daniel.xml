@@ -1,6 +1,7 @@
 <component name="ProjectDictionaryState">
   <dictionary name="Daniel">
     <words>
+      <w>amazonaws</w>
       <w>byod</w>
       <w>conv</w>
       <w>cuda</w>
@@ -10,7 +11,9 @@
       <w>larkin</w>
       <w>llib</w>
       <w>ornstein</w>
+      <w>pytorch</w>
       <w>relu</w>
+      <w>sagemaker</w>
       <w>schulich</w>
       <w>uhlenbeck</w>
     </words>

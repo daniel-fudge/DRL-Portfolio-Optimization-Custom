@@ -80,6 +80,10 @@ class Agent:
 
     def reset(self):
         self.noise.reset()
+        self.actor_local.reset_parameters()
+        self.actor_target.reset_parameters()
+        self.critic_local.reset_parameters()
+        self.critic_target.reset_parameters()
 
     def learn(self, experiences):
         """Update policy and value parameters using given batch of experience tuples.

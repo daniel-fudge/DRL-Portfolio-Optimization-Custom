@@ -73,7 +73,7 @@ def offline_training(day):
     p = p / p.sum()
 
     # We train until we consistently beat the market or the max number of epochs reached.
-    epoch_window = deque(maxlen=100)
+    epoch_window = deque(maxlen=10)
     for e in range(args.max_epochs):
         state = env.reset(epoch_start=np.random.choice(max_start_day, size=None, p=p))
         for d in range(args.days_per_epoch):
@@ -83,10 +83,15 @@ def offline_training(day):
             state = next_state
         epoch_window.append(env.portfolio_value / env.market_value)
 
-        if (np.mean(epoch_window) > target) and (e > 10):
-            break
-        elif args.debug:
-            print(np.mean(epoch_window))
+        if len(epoch_window) > 5:
+            if np.mean(epoch_window) > target:
+                break
+            elif np.mean(epoch_window) < 0.9:
+                epoch_window = deque(maxlen=10)
+                agent.reset()
+                print("Resetting agent.")
+            elif args.debug:
+                print(np.mean(epoch_window))
 
 
 # ***************************************************************************************
@@ -108,7 +113,10 @@ def train():
     portfolio = np.ones(env.n_dates + 1)
     market = np.ones(env.n_dates + 1)
     weights = np.insert(np.zeros(env.n_assets), 0, 1.0)
+    delta_days = 5
+    days_after_train = 0
     for day in range(args.start_day, env.n_dates):
+        days_after_train += 1
 
         # Make the real trade for today (you only get to do this once)
         state = env.reset(epoch_start=day, portfolio_value=portfolio[day], market_value=market[day], weights=weights)
@@ -126,10 +134,11 @@ def train():
             print('Day {} p/m ratio: {:.2f}'.format(day, portfolio[day + 1] / market[day + 1]))
 
         # Retrain if we aren't beating the market over last five days
-        alpha = (portfolio[day + 1] - portfolio[day - 4]) / portfolio[day - 4] - \
-                (market[day + 1] - market[day - 4]) / market[day - 4]
-        if alpha <= target:
+        alpha = (portfolio[day + 1] - portfolio[day - delta_days + 1]) / portfolio[day - delta_days + 1] - \
+                (market[day + 1] - market[day - delta_days + 1]) / market[day - delta_days + 1]
+        if (alpha <= target) and (days_after_train > delta_days):
             offline_training(day)
+            days_after_train = 0
 
     # Print the final information for curiosity and hyperparameter tuning
     alpha = (1 + portfolio[-1] - market[-1]) ** (252.0 / (env.n_dates - args.start_day)) - 1.0
@@ -178,7 +187,7 @@ if __name__ == '__main__':
     parser.add_argument('--window_length', type=int, default=10, help='CNN window length (default: 10)')
     parser.add_argument('--memory_strength', type=float, default=2.0, help='memory exponential gain (default: 2.0)')
     parser.add_argument('--target', type=float, default=0.05, help='target annual alpha (default: 0.05)')
-    parser.add_argument('--fc1', type=int, default=9, help='size of 1st hidden layer (default: 6)')
+    parser.add_argument('--fc1', type=int, default=9, help='size of 1st hidden layer (default: 9)')
     parser.add_argument('--fc2', type=int, default=0, help='size of 2nd hidden layer (default: 0)')
     parser.add_argument('--lr_actor', type=float, default=0.00037, help='actor learning rate (default: 0.00037)')
     parser.add_argument('--lr_critic', type=float, default=0.0011, help='critic learning rate (default: 0.0011)')
