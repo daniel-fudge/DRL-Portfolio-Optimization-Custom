@@ -209,7 +209,8 @@ class AssetModel(nn.Module):
         # x = self.drop1(self.relu(self.conv1d(state)))
         x = self.relu(self.conv1d(state))
         x = x.contiguous().view(-1, self.conv1d_out)
-        x = self.drop2(self.relu(self.fc1(x)))
+        # x = self.drop2(self.relu(self.fc1(x)))
+        x = self.relu(self.fc1(x))
         if self.use_fc2:
             x = self.drop2(self.relu(self.fc2(x)))
         return x
