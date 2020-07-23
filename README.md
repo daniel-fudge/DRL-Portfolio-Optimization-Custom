@@ -8,7 +8,6 @@ developed on AWS SageMaker.
 - [Incremental Approach](#incremental-approach)
   - [Custom DRL in a Toy Environment](#custom-drl-in-a-toy-environment)
   - [Custom Environment - Deterministic Time-Invariant Pricing](#custom-environment---deterministic-time-invariant-pricing)
-  - [Testing - Deterministic Time Varying Pricing Functions](#testing---deterministic-time-varying-pricing-functions)
   - [Testing - Real Pricing Information](#testing---real-pricing-information)
 - [Results](#results)
 - [License](#license)
@@ -66,10 +65,6 @@ process will be able to solve the environment.
 
 Please see this [notebook](synthetic.ipynb) for the generation of the synthetic price data. If you wish to run on your
 local PC, please follow this [instructions](local-setup.md).
-
-#### Testing - Deterministic Time Varying Pricing Functions
-This increment allows the pricing functions to be dependent on time. In other words, the rules of the game change over 
-time. The process should adapt to these changing rules.
 
 #### Testing - Real Pricing Information
 In this final increment the process is applied to real signals as a final test. 
