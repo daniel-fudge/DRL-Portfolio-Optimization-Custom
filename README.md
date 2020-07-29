@@ -13,6 +13,7 @@ developed on AWS SageMaker.
   - [Trading Synthetic Data for a Year](#trading-synthetic-data-for-a-year)
   - [Trading Real Data for a Year](#trading-real-data-for-a-year)
   - [Trading Real Data for 2 Years](#trading-real-data-for-2-years)
+  - [Trading Over the Covid Cliff](#trading-over-the-covid-cliff)
 - [Model Architecture](#model-architecture)
   - [Simplified Actor Network](#simplified-actor-network)
   - [Actual Actor Network](#actual-actor-network)
@@ -92,6 +93,11 @@ As shown below, the gains from the real data was more modest and erratic.
 We pushed the system trade over two years and achieved the performance below.
 
 ![real-2](images/history-real-2-year.png)
+
+#### Trading Over the COVID Cliff
+Here we let the algorithm trade through the March 2020 market meltdown.
+
+![covid](images/history-covid.png)
 
 ## Model Architecture
 #### Simplified Actor Network
