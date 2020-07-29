@@ -14,6 +14,9 @@ developed on AWS SageMaker.
   - [Trading Real Data for a Year](#trading-real-data-for-a-year)
   - [Trading Real Data for 2 Years](#trading-real-data-for-2-years)
 - [Model Architecture](#model-architecture)
+  - [Simplified Actor Network](#simplified-actor-network)
+  - [Actual Actor Network](#actual-actor-network)
+  - [Actual Critic Network](#actual-critic-network)
 - [License](#license)
 - [Contributions](#contributions)
 
@@ -102,7 +105,7 @@ Below is the actual actor network selected by the hyperparameter tuning.
 ![actor-real](images/network-actor-real-annotated.png)
 
 #### Actual Critic Network
-Below is the actual actor network selected by the hyperparameter tuning.
+Below is the actual critic network.
 
 ![critic-real](images/network-critic-real-annotated.png)
 
