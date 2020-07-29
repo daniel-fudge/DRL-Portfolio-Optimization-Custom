@@ -10,6 +10,10 @@ developed on AWS SageMaker.
   - [Custom Environment - Deterministic Time-Invariant Pricing](#custom-environment---deterministic-time-invariant-pricing)
   - [Testing - Real Pricing Information](#testing---real-pricing-information)
 - [Results](#results)
+  - [Trading Synthetic Data for a Year](#trading-synthetic-data-for-a-year)
+  - [Trading Real Data for a Year](#trading-real-data-for-a-year)
+  - [Trading Real Data for 2 Years](#trading-real-data-for-2-years)
+- [Model Architecture](#model-architecture)
 - [License](#license)
 - [Contributions](#contributions)
 
@@ -70,7 +74,37 @@ local PC, please follow this [instructions](local-setup.md).
 In this final increment the process is applied to real signals as a final test. 
  
 ## Results 
+#### Trading Synthetic Data for a Year 
+As expected, the algorithm was able to achieve very high gains when trading the synthetic data as shown below. However, 
+the true test is with the real pricing history.
 
+![fake](images/history-synthetic.png)
+
+#### Trading Real Data for a Year
+As shown below, the gains from the real data was more modest and erratic.
+
+![real-1](images/history-real-1-year.png)
+
+#### Trading Real Data for 2 Years
+We pushed the system trade over two years and achieved the performance below.
+
+![real-2](images/history-real-2-year.png)
+
+## Model Architecture
+#### Simplified Actor Network
+Below is a simplified network to illustrate the connections between each layer of the actor neural network.
+
+![simplified](images/network-actor-simple-annotated.png)
+
+#### Actual Actor Network
+Below is the actual actor network selected by the hyperparameter tuning.
+
+![actor-real](images/network-actor-real-annotated.png)
+
+#### Actual Critic Network
+Below is the actual actor network selected by the hyperparameter tuning.
+
+![critic-real](images/network-critic-real-annotated.png)
 
 ## License
 This code is copyright under the [MIT License](LICENSE).
