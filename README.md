@@ -105,7 +105,7 @@ Below is the actual actor network selected by the hyperparameter tuning.
 ![actor-real](images/network-actor-real-annotated.png)
 
 #### Actual Critic Network
-Below is the actual actor network selected by the hyperparameter tuning.
+Below is the actual critic network.
 
 ![critic-real](images/network-critic-real-annotated.png)
 
