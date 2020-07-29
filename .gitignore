@@ -127,6 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/build-temp.ipynb
+/output.tar.gz
+/results.csv
 /portfolio-management.csv
 /history.csv
 /history.png
