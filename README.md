@@ -14,6 +14,9 @@ developed on AWS SageMaker.
   - [Trading Real Data for a Year](#trading-real-data-for-a-year)
   - [Trading Real Data for 2 Years](#trading-real-data-for-2-years)
 - [Model Architecture](#model-architecture)
+  - [Simplified Actor Network](#simplified-actor-network)
+  - [Actual Actor Network](#actual-actor-network)
+  - [Actual Critic Network](#actual-critic-network)
 - [License](#license)
 - [Contributions](#contributions)
 
