@@ -16,6 +16,7 @@ class PortfolioEnv:
         trading_cost (float):  Cost of trade as a fraction.
         window_length (int):  How many past observations to return.
         prices_name (str):  CSV file name for the price history.
+        signals_name (str):  CSV file name for the signals.
 
     Attributes:
         dates (np.array of np.datetime64):  [n_days] Dates for the signals and price history arrays.
@@ -34,7 +35,7 @@ class PortfolioEnv:
         weights (np.array):  [1 + n_assets]  The portfolio asset weighting starting with cash.
     """
 
-    def __init__(self, trading_cost, window_length, prices_name):
+    def __init__(self, trading_cost, window_length, prices_name, signals_name):
         """An environment for financial portfolio management."""
 
         # Initialize some local parameters
@@ -59,7 +60,7 @@ class PortfolioEnv:
         self.weights = np.insert(np.zeros(self.n_assets), 0, 1.0)
 
         # Read the signals
-        df = pd.read_csv(os.path.join(src_folder, 'signals.csv'), index_col=0, parse_dates=True)
+        df = pd.read_csv(os.path.join(src_folder, signals_name), index_col=0, parse_dates=True)
         signal_names = [s.split("_", 1)[0] for s in df.columns if s.endswith('_' + self.asset_names[0])]
         columns = [s + '_' + a for s in signal_names for a in self.asset_names]
         self.signals = df.loc[:, columns].T.values[np.newaxis, :, :]

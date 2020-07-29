@@ -175,8 +175,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # These are general setting
-    parser.add_argument('--prices_name', type=str, default='prices1.csv',
-                        help='the csv file name containing the price history (default: prices1.csv)')
+    parser.add_argument('--prices_name', type=str, default='prices-2019.csv',
+                        help='the csv file name containing the price history (default: prices-2019.csv)')
+    parser.add_argument('--signals_name', type=str, default='signals-2019.csv',
+                        help='the csv file name containing the signals (default: signals-2019.csv)')
     parser.add_argument('--trading_cost', type=float, default=0.0025, help='trading cost (default: 0.0025)')
     parser.add_argument('--debug', type=int, default=0, help='print debug if != 0 (default: 0)')
 
@@ -212,7 +214,8 @@ if __name__ == '__main__':
     # Setup the training environment
     # -----------------------------------------------------------------------------------
     print('Setting up the environment.')
-    env = PortfolioEnv(prices_name=args.prices_name, trading_cost=args.trading_cost, window_length=args.window_length)
+    env = PortfolioEnv(prices_name=args.prices_name, signals_name=args.signals_name,
+                       trading_cost=args.trading_cost, window_length=args.window_length)
     print('Number of assets: {}'.format(env.n_assets))
     print('Signals per asset: {}'.format(env.n_signals))
 
