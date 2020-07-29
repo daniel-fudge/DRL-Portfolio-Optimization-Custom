@@ -100,6 +100,8 @@ Here we let the algorithm trade through the March 2020 market meltdown.
 ![covid](images/history-covid.png)
 
 ## Model Architecture
+The following architecture drawings were made with the [make-network.py](make-network.py) custom script.  Please feel 
+free to customize for you own application.
 #### Simplified Actor Network
 Below is a simplified network to illustrate the connections between each layer of the actor neural network.
 
