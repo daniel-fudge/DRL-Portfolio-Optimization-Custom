@@ -1,6 +1,6 @@
 # DRL Portfolio Optimization Custom
 A portfolio optimization framework leveraging Deep Reinforcement Learning (DRL) and a custom trading environment 
-developed on AWS SageMaker.
+developed on AWS SageMaker.  Supported by YouTube [playlist](https://www.youtube.com/playlist?list=PLJtqqeC4KrwQ1AK9mo6TrbRX0mdRrwpO8).
 
 ### Table of Contents
 - [Motivation](#motivation)
